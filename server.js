@@ -24,7 +24,7 @@ function clean(quiz) {
     const options = Array.isArray(q.options) ? q.options.slice(0, 4).map(o => String(o).slice(0, 100)) : [];
     return {
       text: String(q.text || '').slice(0, 200), options,
-      correct: Number(q.correct), time: Math.min(60, Math.max(5, Number(q.time) || 20))
+      correct: Number(q.correct), img: /^https:\/\/\S+$/.test(q.img || '') ? String(q.img).slice(0, 300) : '', time: Math.min(60, Math.max(5, Number(q.time) || 20))
     };
   }).filter(q => q.text && q.options.length >= 2 && Number.isInteger(q.correct) && q.correct >= 0 && q.correct < q.options.length);
 }
@@ -33,7 +33,7 @@ function ask(g) {
   const q = g.quiz[g.idx];
   g.state = 'question'; g.start = Date.now();
   list(g).forEach(p => { p.answer = null; });
-  broadcast(g, { t: 'q', idx: g.idx, total: g.quiz.length, text: q.text, options: q.options, time: q.time });
+  broadcast(g, { t: 'q', idx: g.idx, total: g.quiz.length, text: q.text, options: q.options, img: q.img, time: q.time });
   clearTimeout(g.timer);
   g.timer = setTimeout(() => reveal(g), q.time * 1000 + 300);
 }
@@ -45,18 +45,19 @@ function reveal(g) {
   const counts = q.options.map(() => 0);
   list(g).forEach(p => {
     p.pts = 0;
-    if (!p.answer) return;
+    if (!p.answer) { p.streak = 0; return; }
     counts[p.answer.i]++;
     if (p.answer.i === q.correct) {
-      p.pts = Math.round(1000 * (1 - (p.answer.ms / (q.time * 1000)) / 2));
+      p.streak = (p.streak || 0) + 1;
+      p.pts = Math.round(1000 * (1 - (p.answer.ms / (q.time * 1000)) / 2)) + Math.min(p.streak - 1, 4) * 100;
       p.score += p.pts;
-    }
+    } else p.streak = 0;
   });
   send(g.host, { t: 'reveal', correct: q.correct, counts, top: top(g), last: g.idx >= g.quiz.length - 1 });
   const b = board(g);
   b.forEach((p, r) => send(p.ws, {
     t: 'result', answered: !!p.answer, correct: !!p.answer && p.answer.i === q.correct,
-    pts: p.pts, score: p.score, rank: r + 1, of: b.length
+    pts: p.pts, score: p.score, rank: r + 1, of: b.length, streak: p.streak || 0
   }));
 }
 

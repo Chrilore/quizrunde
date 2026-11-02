@@ -14,11 +14,13 @@ section.on{display:flex}
 h1{font-size:clamp(34px,9vw,60px);line-height:1.05;margin:0;font-weight:900}
 h2{font-size:clamp(24px,5vw,38px);line-height:1.2;margin:0;font-weight:800}
 input,textarea{width:100%;font:inherit;padding:14px 16px;border-radius:12px;border:3px solid var(--panel);background:var(--panel);color:var(--ink)}
-textarea{min-height:280px;font:500 15px/1.5 ui-monospace,Menlo,Consolas,monospace}
+textarea{min-height:300px;font:500 15px/1.5 ui-monospace,Menlo,Consolas,monospace}
 input:focus,textarea:focus,button:focus-visible{outline:3px solid var(--c1);outline-offset:2px}
 button{font:inherit;font-weight:800;padding:14px 22px;border:0;border-radius:12px;background:var(--c1);color:#1B1340;cursor:pointer}
 button.sec{background:var(--panel);color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
 button[hidden]{display:none}
+#mute{position:fixed;top:10px;right:10px;padding:8px 14px;font-size:15px;z-index:5}
 .pin{font-size:clamp(56px,17vw,130px);font-weight:900;letter-spacing:.06em;color:var(--c1);line-height:1}
 .muted{color:var(--mut);font-weight:500}
 .err{color:#FF8FB5;min-height:1.4em;margin:0}
@@ -31,17 +33,24 @@ button[hidden]{display:none}
 .opt .n{margin-left:auto;font-size:28px}
 .c0{background:var(--c0)}.c1{background:var(--c1);color:#1B1340}.c2{background:var(--c2)}.c3{background:var(--c3)}
 .opt.dim{opacity:.3}
-.track{height:12px;border-radius:99px;background:var(--panel);overflow:hidden}
+.track{height:12px;border-radius:99px;background:var(--panel);overflow:hidden;flex:1}
 #bar{height:100%;width:100%;background:var(--c1)}
-.row{display:flex;gap:12px;flex-wrap:wrap}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 ol{margin:0;padding-left:1.4em}
 li{padding:4px 0}
 .big{font-size:clamp(40px,12vw,80px);font-weight:900;line-height:1.05;margin:0}
 .ok{color:var(--c2)}.bad{color:var(--c3)}
+.qimg{max-width:100%;max-height:34vh;object-fit:contain;border-radius:12px;align-self:center}
+.qimg[hidden]{display:none}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;height:280px}
+.pod{flex:1;max-width:210px;border-radius:12px 12px 0 0;padding:12px 8px;text-align:center;word-break:break-word;font-weight:900}
+.pod small{display:block;font-weight:600}
+.p1{height:100%;background:var(--c1);color:#1B1340}.p2{height:74%;background:var(--c0)}.p3{height:54%;background:var(--c3)}
 @media(prefers-reduced-motion:reduce){#bar{transition:none!important}}
 </style>
 </head>
 <body>
+<button id="mute" class="sec">Ton an</button>
 <main>
 
 <section id="home" class="on">
@@ -57,7 +66,7 @@ li{padding:4px 0}
 
 <section id="setup">
   <h2>Dein Quiz</h2>
-  <p class="muted">Eine Frage pro Block, getrennt durch eine Leerzeile. Erste Zeile ist die Frage, danach 2 bis 4 Antworten. Die richtige Antwort beginnt mit *.</p>
+  <p class="muted">Eine Frage pro Block, getrennt durch eine Leerzeile. Erste Zeile ist die Frage, danach 2 bis 4 Antworten. Die richtige Antwort beginnt mit *. Für ein Bild schreibst du in eine eigene Zeile: bild: https://... (Adresse eines Bildes im Netz).</p>
   <textarea id="quiz" spellcheck="false"></textarea>
   <label class="muted">Sekunden pro Frage <input id="secs" type="number" min="5" max="60" value="20"></label>
   <p class="err" id="serr"></p>
@@ -70,6 +79,7 @@ li{padding:4px 0}
 <section id="hlobby">
   <p class="muted" id="where"></p>
   <div class="pin" id="showpin"></div>
+  <div class="row"><button id="copy" class="sec">Beitrittslink kopieren</button></div>
   <h2 id="lobbycount">Warte auf Spieler</h2>
   <div class="names" id="names"></div>
   <div class="row"><button id="start" disabled>Spiel starten</button></div>
@@ -77,7 +87,8 @@ li{padding:4px 0}
 
 <section id="hq">
   <h2 id="qtext"></h2>
-  <div class="track"><div id="bar"></div></div>
+  <img id="himg" class="qimg" alt="" hidden referrerpolicy="no-referrer">
+  <div class="row"><div class="track"><div id="bar"></div></div><span id="tleft" class="big" style="font-size:36px"></span></div>
   <p class="muted" id="cnt"></p>
   <div class="grid" id="hopts"></div>
   <ol id="board" hidden></ol>
@@ -94,6 +105,7 @@ li{padding:4px 0}
 
 <section id="pq">
   <p class="muted" id="pqtext"></p>
+  <img id="pimg" class="qimg" alt="" hidden referrerpolicy="no-referrer">
   <div class="grid" id="popts"></div>
 </section>
 
@@ -105,12 +117,14 @@ li{padding:4px 0}
 <section id="pres">
   <p class="big" id="presmain"></p>
   <h2 id="prespts"></h2>
+  <p id="presstreak"></p>
   <p class="muted" id="presrank"></p>
 </section>
 
 <section id="end">
   <h1 id="endtitle"></h1>
-  <ol id="endlist"></ol>
+  <div class="podium" id="podium" hidden></div>
+  <ol id="endlist" start="4"></ol>
   <p class="muted" id="endsub"></p>
   <div class="row"><button onclick="location.reload()">Neue Runde</button></div>
 </section>
@@ -141,10 +155,31 @@ Sydney
 Melbourne
 *Canberra
 Perth`;
-let ws, role, ingame = false;
+let ws, role, ingame = false, myPin = '', tick;
+
+/* Ton */
+let ac, muted = false;
+function unlock() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (ac && ac.state === 'suspended') ac.resume();
+}
+function tone(f, d, at = 0, type = 'sine') {
+  if (muted || !ac) return;
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at;
+  o.type = type; o.frequency.value = f; o.connect(g); g.connect(ac.destination);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.25, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.start(t); o.stop(t + d + .05);
+}
+const snd = {
+  q: () => { tone(523, .15); tone(659, .15, .15); tone(784, .25, .3); },
+  ok: () => { tone(659, .12); tone(880, .3, .12); },
+  bad: () => tone(196, .4, 0, 'sawtooth'),
+  end: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, .3, i * .18))
+};
+$('mute').onclick = () => { muted = !muted; $('mute').textContent = muted ? 'Ton aus' : 'Ton an'; unlock(); };
 
 function show(id) { document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === id)); }
-function gone(msg) { ingame = false; $('gonemsg').textContent = msg; show('gone'); }
+function gone(msg) { ingame = false; clearInterval(tick); $('gonemsg').textContent = msg; show('gone'); }
 function connect(onopen) {
   ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
   ws.onopen = onopen;
@@ -154,12 +189,23 @@ function connect(onopen) {
 const tx = m => ws.send(JSON.stringify(m));
 
 function parse(txt, time) {
-  return txt.split(/\n\s*\n/).map(b => b.split('\n').map(s => s.trim()).filter(Boolean)).filter(l => l.length >= 3).map(l => {
+  return txt.split(/\n\s*\n/).map(b => {
+    let img = '';
+    const l = b.split('\n').map(s => s.trim()).filter(Boolean).filter(x => {
+      const m = x.match(/^bild:\s*(https:\/\/\S+)$/i);
+      if (m) { img = m[1]; return false; }
+      return true;
+    });
+    return { l, img };
+  }).filter(x => x.l.length >= 3).map(({ l, img }) => {
     const o = l.slice(1, 5);
-    return { text: l[0], options: o.map(x => x.replace(/^\*\s*/, '')), correct: o.findIndex(x => x.startsWith('*')), time };
+    return { text: l[0], img, options: o.map(x => x.replace(/^\*\s*/, '')), correct: o.findIndex(x => x.startsWith('*')), time };
   }).filter(q => q.correct >= 0);
 }
 
+function setImg(el, src) {
+  if (src) { el.src = src; el.hidden = false; } else { el.hidden = true; el.removeAttribute('src'); }
+}
 function opts(box, options, clickable) {
   box.replaceChildren();
   options.forEach((o, i) => {
@@ -172,11 +218,26 @@ function opts(box, options, clickable) {
     box.append(b);
   });
 }
+function countdown(sec) {
+  clearInterval(tick); let t = sec; $('tleft').textContent = t;
+  tick = setInterval(() => { t--; $('tleft').textContent = Math.max(t, 0); if (t <= 0) clearInterval(tick); }, 1000);
+}
+function podium(top) {
+  const box = $('podium'); box.replaceChildren();
+  [1, 0, 2].forEach(i => {
+    const p = top[i]; if (!p) return;
+    const d = document.createElement('div'); d.className = 'pod p' + (i + 1);
+    const n = document.createElement('span'); n.textContent = (i + 1) + '. ' + p.name;
+    const s = document.createElement('small'); s.textContent = p.score + ' Punkte';
+    d.append(n, s); box.append(d);
+  });
+  box.hidden = false;
+}
 
 function handle(m) {
   if (m.t === 'err') { if (ingame) return gone(m.msg); $('jerr').textContent = $('serr').textContent = m.msg; return; }
   if (m.t === 'hosting') {
-    ingame = true; $('showpin').textContent = m.pin;
+    ingame = true; myPin = m.pin; $('showpin').textContent = m.pin;
     $('where').textContent = 'Öffne ' + location.host + ' auf dem Handy und gib diesen Code ein:';
     show('hlobby');
   } else if (m.t === 'lobby') {
@@ -186,22 +247,27 @@ function handle(m) {
   } else if (m.t === 'joined') {
     ingame = true; show('pwait');
   } else if (m.t === 'q') {
+    snd.q();
     if (role === 'host') {
       $('qtext').textContent = (m.idx + 1) + '/' + m.total + '  ' + m.text;
+      setImg($('himg'), m.img);
       opts($('hopts'), m.options, false);
       $('board').hidden = true; $('next').hidden = true; $('skip').hidden = false;
       $('cnt').textContent = '0 Antworten';
       const bar = $('bar'); bar.style.transition = 'none'; bar.style.width = '100%'; bar.offsetWidth;
       bar.style.transition = 'width ' + m.time + 's linear'; bar.style.width = '0%';
+      countdown(m.time);
       show('hq');
     } else {
       $('pqtext').textContent = m.text;
+      setImg($('pimg'), m.img);
       opts($('popts'), m.options, true);
       show('pq');
     }
   } else if (m.t === 'count') {
     $('cnt').textContent = m.n + ' von ' + m.of + ' haben geantwortet';
   } else if (m.t === 'reveal') {
+    clearInterval(tick);
     document.querySelectorAll('#hopts .opt').forEach((o, i) => {
       o.classList.toggle('dim', i !== m.correct);
       const n = document.createElement('span'); n.className = 'n'; n.textContent = m.counts[i]; o.append(n);
@@ -214,37 +280,52 @@ function handle(m) {
     const main = $('presmain');
     main.textContent = m.correct ? 'Richtig!' : (m.answered ? 'Leider falsch' : 'Keine Antwort');
     main.className = 'big ' + (m.correct ? 'ok' : 'bad');
-    $('prespts').textContent = m.correct ? '+' + m.pts + ' Punkte' : '+0 Punkte';
+    $('prespts').textContent = '+' + (m.correct ? m.pts : 0) + ' Punkte';
+    $('presstreak').textContent = m.streak > 1 ? m.streak + ' richtige in Folge, Serien-Bonus inklusive' : '';
     $('presrank').textContent = 'Platz ' + m.rank + ' von ' + m.of + ' mit ' + m.score + ' Punkten';
+    (m.correct ? snd.ok : snd.bad)();
     show('pres');
   } else if (m.t === 'end') {
-    ingame = false;
+    ingame = false; clearInterval(tick); snd.end();
     if (role === 'host') {
       $('endtitle').textContent = 'Endergebnis';
-      $('endlist').replaceChildren(...m.top.map(p => { const li = document.createElement('li'); li.textContent = p.name + ': ' + p.score; return li; }));
+      podium(m.top);
+      $('endlist').replaceChildren(...m.top.slice(3).map(p => { const li = document.createElement('li'); li.textContent = p.name + ': ' + p.score; return li; }));
       $('endsub').textContent = '';
     } else {
       $('endtitle').textContent = 'Platz ' + m.rank + ' von ' + m.of;
-      $('endlist').replaceChildren();
+      $('podium').hidden = true; $('endlist').replaceChildren();
       $('endsub').textContent = m.score + ' Punkte';
     }
     show('end');
   }
 }
 
-$('quiz').value = SAMPLE;
+try { $('quiz').value = localStorage.getItem('quizrunde') || SAMPLE; } catch (e) { $('quiz').value = SAMPLE; }
+const qp = new URLSearchParams(location.search).get('pin');
+if (qp) $('pin').value = qp.replace(/\D/g, '').slice(0, 5);
+
 $('tohost').onclick = () => show('setup');
 $('join').onclick = () => {
+  unlock();
   const pin = $('pin').value.trim(), name = $('name').value.trim();
   if (!pin || !name) { $('jerr').textContent = 'Bitte Code und Namen eingeben.'; return; }
   $('jerr').textContent = ''; role = 'player';
   connect(() => tx({ t: 'join', pin, name }));
 };
 $('create').onclick = () => {
+  unlock();
   const quiz = parse($('quiz').value, Number($('secs').value) || 20);
   if (!quiz.length) { $('serr').textContent = 'Mindestens eine Frage mit 2 bis 4 Antworten, die richtige mit * markiert.'; return; }
+  try { localStorage.setItem('quizrunde', $('quiz').value); } catch (e) {}
   $('serr').textContent = ''; role = 'host';
   connect(() => tx({ t: 'host', quiz }));
+};
+$('copy').onclick = () => {
+  const link = location.origin + '/?pin=' + myPin;
+  (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(
+    () => { $('copy').textContent = 'Link kopiert'; },
+    () => { $('copy').textContent = link; });
 };
 $('start').onclick = () => tx({ t: 'start' });
 $('skip').onclick = () => tx({ t: 'skip' });
